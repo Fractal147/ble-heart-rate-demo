@@ -21490,6 +21490,49 @@
 
 	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
+	
+		/* Utils */
+	
+	// This function keeps calling "toTry" until promise resolves or has
+	// retried "max" number of times. First retry has a delay of "delay" seconds.
+	// "success" is called upon success.
+	function exponentialBackoff(max, delay, toTry, success, fail) {
+	  toTry().then(result => success(result))
+	  .catch(_ => {
+	    if (max === 0) {
+	      return fail();
+	    }
+	    time('Retrying in ' + delay + 's... (' + max + ' tries left)');
+	    setTimeout(function() {
+	      exponentialBackoff(--max, delay * 2, toTry, success, fail);
+	    }, delay * 1000);
+	  });
+	}
+	
+	function time(text) {
+	  log('[' + new Date().toJSON().substr(11, 8) + '] ' + text);
+	}
+
+	function onDisconnected() {
+	  log('> Bluetooth Device disconnected');
+	  connect();
+	}
+	function connect() {
+	  exponentialBackoff(3600 /* max retries */, 2 /* seconds delay */,
+	    function toTry() {
+	      time('Connecting to Bluetooth Device... ');
+	      return bluetoothDevice.gatt.connect();
+	    },
+	    function success() {
+	      log('> Bluetooth Device connected. Try disconnect it now.');
+	    },
+	    function fail() {
+	      time('Failed to reconnect.');
+	    });
+	}
+
+	var bluetoothDevice;
+	
 	var App = function (_Component) {
 	    _inherits(App, _Component);
 
@@ -21518,6 +21561,8 @@
 	            var _this2 = this;
 
 	            return navigator.bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] }).then(function (device) {
+			    bluetoothDevice = device;
+			    bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
 	                return device.gatt.connect();
 	            }).then(function (server) {
 	                return server.getPrimaryService('heart_rate');
