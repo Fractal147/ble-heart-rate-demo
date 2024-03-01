@@ -21510,11 +21510,11 @@
 	}
 	
 	function time(text) {
-	  log('[' + new Date().toJSON().substr(11, 8) + '] ' + text);
+	  console.log('[' + new Date().toJSON().substr(11, 8) + '] ' + text);
 	}
 
 	function onDisconnected() {
-	  log('> Bluetooth Device disconnected');
+	  console.log('> Bluetooth Device disconnected');
 	  connect();
 	}
 	function connect() {
@@ -21524,7 +21524,7 @@
 	      return bluetoothDevice.gatt.connect();
 	    },
 	    function success() {
-	      log('> Bluetooth Device connected. Try disconnect it now.');
+	      console.log('> Bluetooth Device connected. Try disconnect it now.');
 	    },
 	    function fail() {
 	      time('Failed to reconnect.');
